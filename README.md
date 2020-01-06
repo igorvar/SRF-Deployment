@@ -7,7 +7,7 @@ The project includes 2 scripts:
 
 To run these scripts:
 + First way: Right click on ps1 file -> Run with PowerShell
-+ Second way: powershell.exe -NoLogo -NoExit -ExecutionPolicy Unrestricted -File <PathToFile>.PS1
++ Second way: powershell.exe -NoLogo -NoExit -ExecutionPolicy Unrestricted -File {PathToFile}.PS1
 
 CompileAndDeploy.ps1 performs the following operations:
 - Launches Siebel Tools and performs a full compilation into the siebel_sia.srf.new file for each language.
