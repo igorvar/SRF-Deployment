@@ -10,10 +10,11 @@ To run these scripts:
 + Second way: powershell.exe -NoLogo -NoExit -ExecutionPolicy Unrestricted -File {PathToFile}.PS1
 
 CompileAndDeploy.ps1 performs the following operations:
-- Launches Siebel Tools and performs a full compilation into the siebel_sia.srf.new file for each language.
-- compiles browser scripts for each language. At this point, you need the gbs.cfg file in the same folder as the main file.
-- shutdown the siebel service. Copy siebel_sia.srf.new to siebel_sia.srf.last.
-- the current siebel_sia.srf is renamed to siebel_sia.srf. CURRENT_DAY_WEEK, to save the past srf.
+- Launches Siebel Tools and performs a full compilation into the siebel_sia.srf.New.<LANG> file for each language in folder in it executed script.
+- Move file to folder on server with name siebel_sia.srf.New.
+- Compiles browser scripts for each language. At this point, you need the gbs.cfg file in the same folder as the script file.
+- Shutdown the siebel service. Copy siebel_sia.srf.new to siebel_sia.srf.last.
+- The current siebel_sia.srf is renamed to siebel_sia.srf. CURRENT_DAY_WEEK, to save the past srf.
 - Renames siebel_sia.srf.new to siebel_sia.srf and raises the service.
 
 
