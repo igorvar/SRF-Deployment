@@ -14,7 +14,7 @@ CompileAndDeploy.ps1 performs the following operations:
 - Move file to folder on server with name siebel_sia.srf.New.
 - Compiles browser scripts for each language. At this point, you need the gbs.cfg file in the same folder as the script file.
 - Shutdown the siebel service. Copy siebel_sia.srf.new to siebel_sia.srf.last.
-- The current siebel_sia.srf is renamed to siebel_sia.srf.<COMPILATION_DAY_WEEK>, to save the past srf.
+- The current siebel_sia.srf is renamed to siebel_sia.srf.<COMPILATION_DAY_WEEK>, to save the previous srf.
 - If a folder with browser scripts for the previous file is found, it will be deleted.  
 - Renames siebel_sia.srf.New to siebel_sia.srf and runing the service.
 
