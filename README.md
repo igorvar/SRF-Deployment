@@ -33,9 +33,9 @@ Installation
 3. Copy files to this folder:
     - CompileAndDeploy2.ps1
     - DevTestDeployment2.ps1
-  -     gbs.cfg
-  - gbsTest.cfg
-  - (result of compile from step 1)
-  - (result of compile from step 1)
+    - gbs.cfg
+    - gbsTest.cfg
+    - (result of compile from step 1)
+    - (result of compile from step 1)
  4. Edit files CompileAndDeploy2.ps1, DevTestDeployment2.ps1, gbs.cfg, gbsTest.cfg
  5. Create Task Scheduler and/or create shortcuts (powershell.exe -NoLogo -NoExit -ExecutionPolicy Unrestricted -File {PathToFile}.PS1)
