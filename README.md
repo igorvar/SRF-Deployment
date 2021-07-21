@@ -10,18 +10,24 @@ To run these scripts:
 + Second way: powershell.exe -NoLogo -NoExit -ExecutionPolicy Unrestricted -File {PathToFile}.PS1
 
 CompileAndDeploy.ps1 performs the following operations:
-- Launches Siebel Tools and performs a full compilation into the siebel_sia.srf.New.<LANG> file for each language in folder in it executed script.
+- Launches Siebel Tools and performs a full compilation into the siebel_sia.srf.New.<LANG> file for each language in folder in it executed script. If the compilation fails, 2 more attempts will be made for each of the languages.
 - Move file to folder on server with name siebel_sia.srf.New.
 - Compiles browser scripts for each language. At this point, you need the gbs.cfg file in the same folder as the script file.
 - Shutdown the siebel service. Copy siebel_sia.srf.new to siebel_sia.srf.last.
-- The current siebel_sia.srf is renamed to siebel_sia.srf.<CURRENT_DAY_WEEK>, to save the past srf.
-- Renames siebel_sia.srf.New to siebel_sia.srf and raises the service.
+- The current siebel_sia.srf is renamed to siebel_sia.srf.<COMPILATION_DAY_WEEK>, to save the past srf.
+- If a folder with browser scripts for the previous file is found, it will be deleted.  
+- Renames siebel_sia.srf.New to siebel_sia.srf and runing the service.
 
 
 DevTestDeployment.ps1 execute next steps:
 1. Copy siebel_sia.srf for each language from dev environment to all servers in test environment
-2. Generate browser scripts in local folder (BS) and copy it to all server in test. At this point, you need the gbsTest.cfg in the same folder as the main file
+2. Copy from dev env or, if not found, compile browser scripts in local folder (BS) and copy it to all server in test. At this point, you need the gbsTest.cfg in the same folder as the main file
 3. Shutdown siebel service in test
-4. Rename current srf in test with name <time_stamp>_siebel_sia.srf
+4. Rename current srf in test with name <time_stamp_of_compilation>.siebel_sia.srf for full compile or <time_stamp_of_compilation-COMPILATION_MASHINE>.siebel_sia.srf for partial compile.
 5. Rename copied in step 1 file to siebel_sia.srf
 6. Start siebel service
+
+Installation
+1. To compile 
+  
+  
