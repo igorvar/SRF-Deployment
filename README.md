@@ -2,8 +2,8 @@
 SRF Deployment
 
 The project includes 2 scripts:
-1. CompileAndDeploy.ps1
-2. DevTestDeployment.ps1
+1. CompileAndDeploy2.ps1
+2. DevTestDeployment2.ps1
 
 To run these scripts:
 + First way: Right click on ps1 file -> Run with PowerShell
@@ -28,6 +28,14 @@ DevTestDeployment.ps1 execute next steps:
 6. Start siebel service
 
 Installation
-1. To compile 
-  
-  
+1. Compile SrFCompileInfo solution.
+2. Create folder on disk. 
+3. Copy files to this folder:
+  - CompileAndDeploy2.ps1
+  - DevTestDeployment2.ps1
+  - gbs.cfg
+  - gbsTest.cfg
+  - (result of compile from step 1)
+  - (result of compile from step 1)
+ 4. Edit files CompileAndDeploy2.ps1, DevTestDeployment2.ps1, gbs.cfg, gbsTest.cfg
+ 5. Create Task Scheduler and/or create shortcuts (powershell.exe -NoLogo -NoExit -ExecutionPolicy Unrestricted -File {PathToFile}.PS1)
