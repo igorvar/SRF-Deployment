@@ -35,7 +35,7 @@ Installation
     - DevTestDeployment2.ps1
     - gbs.cfg
     - gbsTest.cfg
-    - (result of compile from step 1)
-    - (result of compile from step 1)
+    - SrfCompileInfoCmdLet.dll (result of compile from step 1)
+    - OpenMcdf.dll (result of compile from step 1)
  4. Edit files CompileAndDeploy2.ps1, DevTestDeployment2.ps1, gbs.cfg, gbsTest.cfg
  5. Create Task Scheduler and/or create shortcuts (powershell.exe -NoLogo -NoExit -ExecutionPolicy Unrestricted -File {PathToFile}.PS1)
