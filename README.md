@@ -1,5 +1,5 @@
 # SRF-Deployment
-SRF Deployment
+For get info from srf file used project OpenMcdf https://sourceforge.net/projects/openmcdf/ 
 
 The project includes 2 scripts:
 1. CompileAndDeploy2.ps1
@@ -31,7 +31,7 @@ Installation
 1. Compile SrFCompileInfo solution.
 2. Create folder on disk. 
 3. Copy files to this folder:
-  - CompileAndDeploy2.ps1
+    - CompileAndDeploy2.ps1
   - DevTestDeployment2.ps1
   - gbs.cfg
   - gbsTest.cfg
