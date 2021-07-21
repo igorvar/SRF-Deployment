@@ -32,8 +32,8 @@ Installation
 2. Create folder on disk. 
 3. Copy files to this folder:
     - CompileAndDeploy2.ps1
-  - DevTestDeployment2.ps1
-  - gbs.cfg
+    - DevTestDeployment2.ps1
+  -     gbs.cfg
   - gbsTest.cfg
   - (result of compile from step 1)
   - (result of compile from step 1)
