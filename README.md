@@ -11,8 +11,8 @@ The project includes 2 scripts:
 
 ## What scripts do:
 ### CompileAndDeploy.ps1 performs the following operations:
-7 Launches Siebel Tools and performs a full compilation into the siebel_sia.srf.New.<LANG> file for each language in folder in it executed script. If the compilation fails, 2 more attempts will be made for each of the languages.
-6 Move file to folder on server with name siebel_sia.srf.New.
+7. Launches Siebel Tools and performs a full compilation into the siebel_sia.srf.New.<LANG> file for each language in folder in it executed script. If the compilation fails, 2 more attempts will be made for each of the languages.
+6. Move file to folder on server with name siebel_sia.srf.New.
 5 Compiles browser scripts for each language. At this point, you need the gbs.cfg file in the same folder as the script file.
 4 Shutdown the siebel service. Copy siebel_sia.srf.new to siebel_sia.srf.last.
 3 The current siebel_sia.srf is renamed to siebel_sia.srf.<COMPILATION_DAY_WEEK>, to save the previous srf.
