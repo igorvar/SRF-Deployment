@@ -5,11 +5,12 @@ The project includes 2 scripts:
 1. CompileAndDeploy2.ps1
 1. DevTestDeployment2.ps1
 
-#To run these scripts:
+## To run these scripts:
 + First way: Right click on ps1 file -> Run with PowerShell
 + Second way: powershell.exe -NoLogo -NoExit -ExecutionPolicy Unrestricted -File {PathToFile}.PS1
 
-CompileAndDeploy.ps1 performs the following operations:
+## What scripts do:
+### CompileAndDeploy.ps1 performs the following operations:
 - Launches Siebel Tools and performs a full compilation into the siebel_sia.srf.New.<LANG> file for each language in folder in it executed script. If the compilation fails, 2 more attempts will be made for each of the languages.
 - Move file to folder on server with name siebel_sia.srf.New.
 - Compiles browser scripts for each language. At this point, you need the gbs.cfg file in the same folder as the script file.
@@ -19,7 +20,7 @@ CompileAndDeploy.ps1 performs the following operations:
 - Renames siebel_sia.srf.New to siebel_sia.srf and runing the service.
 
 
-DevTestDeployment.ps1 execute next steps:
+### DevTestDeployment.ps1 execute next steps:
 1. Copy siebel_sia.srf for each language from dev environment to all servers in test environment
 2. Copy from dev env or, if not found, compile browser scripts in local folder (BS) and copy it to all server in test. At this point, you need the gbsTest.cfg in the same folder as the main file
 3. Shutdown siebel service in test
@@ -27,7 +28,7 @@ DevTestDeployment.ps1 execute next steps:
 5. Rename copied in step 1 file to siebel_sia.srf
 6. Start siebel service
 
-Installation
+## Installation
 1. Compile SrFCompileInfo solution.
 2. Create folder on disk. 
 3. Copy files to this folder:
