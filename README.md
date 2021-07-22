@@ -3,9 +3,9 @@ For get info from srf file used project OpenMcdf https://sourceforge.net/project
 
 The project includes 2 scripts:
 1. CompileAndDeploy2.ps1
-2. DevTestDeployment2.ps1
+1. DevTestDeployment2.ps1
 
-To run these scripts:
+#To run these scripts:
 + First way: Right click on ps1 file -> Run with PowerShell
 + Second way: powershell.exe -NoLogo -NoExit -ExecutionPolicy Unrestricted -File {PathToFile}.PS1
 
