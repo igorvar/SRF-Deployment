@@ -7,7 +7,7 @@ The project includes 2 scripts:
 
 ## To run these scripts:
 + First way: Right click on ps1 file -> Run with PowerShell
-+ Second way: powershell.exe -NoLogo -NoExit -ExecutionPolicy Unrestricted -File {PathToFile}.PS1
++ Second way: `powershell.exe -NoLogo -NoExit -ExecutionPolicy Unrestricted -File `{PathToFile}`.PS1`
 
 ## What scripts do:
 ### CompileAndDeploy.ps1 performs the following operations:
