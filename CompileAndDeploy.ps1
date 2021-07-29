@@ -3,7 +3,9 @@
 (Get-Host).UI.RawUI.ForegroundColor = "Green"
 cls;
 
-Set-Variable LANG_LIST -Option Constant -Value "HEB", "ENU"
+Import-Module "$($MyInvocation.MyCommand.Path | Split-Path -Parent)\SrfCompileInfoCmdLet.dll" #-Force #11.07.21. Load dll from folder where present script
+
+Set-Variable LANG_LIST -Option Constant -Value @("HEB", "ENU") -Description "List of languages for compilation"
 
 #[int]$MAX_COMPILE_ATTEMPTS = 3
 Set-Variable MAX_COMPILE_ATTEMPTS -Option Constant -Value 3
@@ -14,9 +16,9 @@ Set-Variable PATH_TO_LOCAL_SRF_FOLDER      -Option Constant -Value (($MyInvocati
 Set-Variable PATH_TO_SERVER_SRF_FOLDER     -Option Constant -Value "\\siebelappdev02\d$\Siebel\15.0.0.0.0\ses\siebsrvr\OBJECTS" #In this folder present srf for each languege. SRF_NAME and SRF_NAME_LAST.
 Set-Variable PATH_TO_BROWSER_SCRIPT_FOLDER -Option Constant -Value "\\siebelappdev02\D$\Siebel\15.0.0.0.0\eappweb\PUBLIC"
 
-Set-Variable SRF_NAME      -Option Constant -Value "siebel_sia.srf"      #File for siebel server executing
-Set-Variable SRF_NAME_NEW  -Option Constant -Value "siebel_sia.srf.New"  #Temporary file for compile
-Set-Variable SRF_NAME_LAST -Option Constant -Value "siebel_sia.srf.Last" #Back copy of SRF_NAME
+Set-Variable SRF_NAME      -Option Constant -Value "siebel_sia.srf"      -Description "File for siebel server executing"
+Set-Variable SRF_NAME_NEW  -Option Constant -Value "siebel_sia.srf.New"  -Description "Temporary file for compile"
+Set-Variable SRF_NAME_LAST -Option Constant -Value "siebel_sia.srf.LastFullCompile.srf" -Description "Back copy of SRF_NAME"
 
 Set-Variable GBS_CFG -Option Constant -Value (($MyInvocation.MyCommand.Path | Split-Path -Parent) + "\gbs.cfg")
 Set-Variable GBS_EXE -Option Constant -Value "C:\Siebel\15.0.0.0.0\Client\BIN\genbscript.exe"
@@ -46,9 +48,7 @@ while($isStopCompile -ne $true)
         
         #if ($recompilingList[$lang + "_Attempt"] -le 1)
         if ($recompilingList["$lang-Attempt"] -le 1)
-        {
-            "$([System.DateTime]::Now.ToString("dd.MM.yyyy HH:mm:ss")). Compiling language $lang"
-        }
+            {"$([System.DateTime]::Now.ToString("dd.MM.yyyy HH:mm:ss")). Compiling language $lang"}
         else
         {
             #"$([System.DateTime]::Now.ToString("dd.MM.yyyy HH:mm:ss")). Compiling language $lang. Attempt # $($recompilingList[$lang + "_Attempt"])"
@@ -96,18 +96,45 @@ foreach ($lang in $LANG_LIST)
     "$([System.DateTime]::Now.ToString("dd.MM.yyyy HH:mm:ss")). Replace srf $lang"
     $newFileName = "$PATH_TO_SERVER_SRF_FOLDER\$lang\$SRF_NAME_NEW"
     $serverFileName = "$PATH_TO_SERVER_SRF_FOLDER\$lang\$SRF_NAME"
-    $arcFileName = $serverFileName  + "." + [System.DateTime]::Now.DayOfWeek
-    #$lastFileName = "$PATH_TO_SERVER_SRF_FOLDER$lang\$SRF_NAME_LAST"
+    
+    $compilationDate = (Get-SrfData $serverFileName).CompilationDate #11.07.21
+    $arcFileName = $serverFileName  + "." + ($compilationDate.DayOfWeek) + ".SRF"  #11.07.21
 
+    if(Test-Path $arcFileName) {$bsFolderToRemove = (Get-SrfData $arcFileName -ErrorAction Ignore).JsFolderName }
+    else {$bsFolderToRemove = ""}
+        
+    #$bsFolderToRemove = (Get-Item -Path $PATH_TO_BROWSER_SCRIPT_FOLDER\$lang\$bsFolderToRemove -ErrorAction Ignore).FullName
     Move-Item -Path $serverFileName -Destination $arcFileName -Force #-WhatIf
     Move-Item -Path $newFileName -Destination $serverFileName #-WhatIf
-    #Remove-Item -Path $lastFileName  #-WhatIf
-    #Move-Item -Path $localFileName -Destination $lastFileName #-WhatIf
-    #Copy-Item -Path $serverFileName -Destination $lastFileName #-WhatIf
+
+    
+    #"$([System.DateTime]::Now.ToString("dd.MM.yyyy HH:mm:ss")). Remove old BS folder - $bsFolderToRemove for $lang"
+    <#if ($bsFolderToRemove -eq $null -or $bsFolderToRemove -eq "" -or -not (Test-Path -Path $PATH_TO_BROWSER_SCRIPT_FOLDER\$lang\$bsFolderToRemove))
+    {
+        "Not found folder with BS for $arcFileName"
+        Remove-Item $PATH_TO_BROWSER_SCRIPT_FOLDER\$lang\$bsFolderToRemove -Recurse -WhatIf 
+    }
+    else
+    {
+        Remove-Item $PATH_TO_BROWSER_SCRIPT_FOLDER\$lang\$bsFolderToRemove -Recurse #-WhatIf 
+    }#>
+
+    if ($bsFolderToRemove -ne $null -and $bsFolderToRemove -ne "")
+    {
+        $bsFolderToRemove = $("$PATH_TO_BROWSER_SCRIPT_FOLDER\$lang\$bsFolderToRemove")
+        if (Test-Path -Path $bsFolderToRemove) 
+        {
+            "$([System.DateTime]::Now.ToString("dd.MM.yyyy HH:mm:ss")). Removing $bsFolderToRemove"
+            #Remove-Item $PATH_TO_BROWSER_SCRIPT_FOLDER\$lang\$bsFolderToRemove -Recurse
+            Remove-Item $bsFolderToRemove -Recurse
+        }
+        else {"Not found folder $bsFolderToRemove"}
+    }
+
 }
 
 #"Start siebel service"
-start-service -InputObject $siebService #-WhatIf
+Start-Service -InputObject $siebService #-WhatIf
 $siebService 
 [System.Console]::WriteLine("Deployment finished.")
 #[System.Console]::ReadLine()
