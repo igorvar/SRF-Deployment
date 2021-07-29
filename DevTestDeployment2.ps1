@@ -32,13 +32,13 @@ $a.WindowSize=$b
 cls
 
 
-Set-Variable ROOT -Option Constant -Value "\\siebelfronttst\d$\Siebel\15.0.0.0.0", "\\Siebelbacktst\d$\Siebel\15.0.0.0.0"     -Description "List of folders containing SES for each server"
+Set-Variable ROOT -Option Constant -Value @("\\siebelfronttst\d$\Siebel\15.0.0.0.0", "\\Siebelbacktst\d$\Siebel\15.0.0.0.0")     -Description "List of folders containing SES for each server"
 
-Set-Variable APP_SERVERS -Option Constant -Value "siebelfronttst",  "Siebelbacktst"     -Description "List the names of the servers that are running the Siebel Services"
+Set-Variable APP_SERVERS -Option Constant -Value @("siebelfronttst",  "Siebelbacktst")     -Description "List the names of the servers that are running the Siebel Services"
 
-Set-Variable SBL_SERVICES -Option Constant -value "siebsrvr_enTST_FRONT01", "siebsrvr_enTST_BACK01"    -Description "List of names of services. Corresponded to APP_SERVERS"
+Set-Variable SBL_SERVICES -Option Constant -value @("siebsrvr_enTST_FRONT01", "siebsrvr_enTST_BACK01")    -Description "List of names of services. Corresponded to APP_SERVERS"
 
-Set-Variable LANG_LIST -Option Constant -Value "HEB", "ENU"     -Description "List of languages"
+Set-Variable LANG_LIST -Option Constant -Value @("HEB", "ENU")     -Description "List of languages"
 
 Set-Variable OBJECTS_FOLDER -Option Constant -Value "ses\siebsrvr\OBJECTS"     -Description "Folder present under ROOT. It contains folders to place SRF files for each language."
 
@@ -75,7 +75,7 @@ This process:
 #[System.Console]::ReadLine()
 #return
 
-Import-Module "$($MyInvocation.MyCommand.Path | Split-Path -Parent)\SrfCompileInfoCmdLet.dll" #-Force #11.07.21. Load dll from folder where present script
+Import-Module "$($MyInvocation.MyCommand.Path | Split-Path -Parent)\SrfCompileInfoCmdLet.dll" #-Force # Load dll from folder where present script
 
 #"Process started at " + [System.DateTime]::Now.ToString("HH:mm:ss")
 "Process started at $([System.DateTime]::Now.ToString("HH:mm:ss"))"
@@ -156,11 +156,12 @@ foreach($envRoot in $ROOT)
         else
             {$prefixOldFile = $currentFileInfo.CompilationDate.ToString("yyyyMMdd-HHmm") + "-" + $currentFileInfo.PcName + "."}
         $fileNameD = $envRoot + "\" + $OBJECTS_FOLDER + "\" + $lang + "\" + $prefixOldFile + "siebel_sia.srf"
-        Rename-Item -Path $fileNameS -NewName $fileNameD  #-WhatIf
+        #Rename-Item -Path $fileNameS -NewName $fileNameD -Force  #-WhatIf
+        Move-Item -Path $fileNameS -Destination $fileNameD -Force #Move_item instead of Rename-Item - if present $fileNameD Rename-Item is failed
 
         $fileNameS = $envRoot + "\" + $OBJECTS_FOLDER + "\" + $lang + "\siebel_sia.srf.Last"
         $fileNameD = $envRoot + "\" + $OBJECTS_FOLDER + "\" + $lang + "\siebel_sia.srf"
-        Rename-Item -Path $fileNameS -NewName $fileNameD  #-WhatIf
+        Rename-Item -Path $fileNameS -NewName $fileNameD #-WhatIf
 
         $bsFolder = "$envRoot\eappweb\PUBLIC\$lang"
         #Get-Item $bsFolder\PreviousSrfJs | Remove-Item  -WhatIf
@@ -170,7 +171,8 @@ foreach($envRoot in $ROOT)
             $currentFileInfo.JsFolderName -ne $null -and $currentFileInfo.JsFolderName -ne ""
           )
         {
-            Remove-Item $bsFolder\PreviousSrfJs -Recurse -ErrorAction Ignore -WhatIf 
+            if(Test-Path $bsFolder\PreviousSrfJs)
+                {Remove-Item $bsFolder\PreviousSrfJs -Recurse <#-ErrorAction Ignore#> -WhatIf}
             Rename-Item "$bsFolder\$($currentFileInfo.JsFolderName)" -NewName "$bsFolder\PreviousSrfJs" -WhatIf 
         }
     }
