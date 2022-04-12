@@ -1,82 +1,174 @@
-(get-host).ui.rawui.windowtitle = "Siebel SRF Full Compile 1.0"
+(get-host).UI.RawUI.WindowTitle = "Siebel SRF Full Compile 3.0"
 (Get-Host).UI.RawUI.BackgroundColor = "Black"
 (Get-Host).UI.RawUI.ForegroundColor = "Green"
-cls;
-#[System.Threading.Thread]::CurrentThread.CurrentCulture = 'he-IL'
-#comm[System.Threading.Thread]::CurrentThread.CurrentUICulture = 'he-IL'
+cls
 
-[Array]$langList = "HEB", "ENU"
-$sblToolsRoot = "C:\Siebel\15.0.0.0.0"
-$sblToolsLogin = "SADMIN"
-$sblToolsPassword = "SADMIN"
-#$sblToolsLogin = "igorv"
-#$sblToolsPassword = "igorv"
-#$sblToolsPassword = "a123123123"
-#$sblToolsLogin = "IGORVA"
-New-PSDrive -Name SblServerRoot -PsProvider FileSystem -Root \\siebelappdev02\D$\Siebel\15.0.0.0.0 | Out-Null
-$siebelService = "siebsrvr_enDEV_asDEV"
-$WEB_SERVER = "siebelappdev02"
-
-foreach($lang in $langList)
+Import-Module "$($MyInvocation.MyCommand.Path | Split-Path -Parent)\SrfCompileInfoCmdLet.dll" #-Force #11.07.21. Load dll from folder where present script
+Function GetMeta($srf)
 {
-    "" + [System.DateTime]::Now.ToString("dd.MM.yyyy HH:mm:ss") + ". Compiling language " + $lang
-    $NEW_SRF = (Get-PSDrive -name SblServerRoot).root + "\ses\siebsrvr\OBJECTS\" + $lang + "\siebel_sia.srf.new"
-    "New SRF: " + $NEW_SRF
-    $process = Start-Process -Filepath $sblToolsRoot'\Tools\bin\siebdev.exe' -ArgumentList "/c", $sblToolsRoot\Tools\bin\enu\tools.cfg, "/d", "ServerDataSrc", "/u", $sblToolsLogin, "/p", $sblToolsPassword, "/bc", '"Siebel Repository"', $NEW_SRF, "/tl", $lang -PassThru <#-NoNewWindow#> -Wait
-    "Compiling of " + $NEW_SRF + " finished at " + $process.ExitTime + " with code " + $process.ExitCode
-<#"HasExited " + $process.HasExited
-"ExitTime " + $process.ExitTime
-"ExitCode " + $process.ExitCode#>
-# <# comment #>
+    #Function try get function from stream Meta.json of srf. If stream not present or Hash of file changed it get data from file
+    $meta = Get-Content $srf -Stream $COMPILE_DATA_INFO_STREAM -ErrorAction Ignore | ConvertFrom-Json
 
-#GBS
-    "GBS Started"
-    #$applicationCfg = "C:\gbs.cfg"
-    $applicationCfg = ($MyInvocation.MyCommand.Path | Split-Path -Parent) + "\gbs.cfg"
-    $bscriptFolder = (Get-PSDrive -name SblServerRoot).root + "\eappweb\PUBLIC\" + $lang 
-    $process = Start-Process -Filepath $sblToolsRoot'\Client\BIN\genbscript.exe' -ArgumentList $applicationCfg, $bscriptFolder, $lang -PassThru -NoNewWindow -Wait 
+    if ((Get-FileHash $srf).Hash -eq $meta.Hash)
+        {
+            $meta = $meta.SrfCompileData
+            $meta.CompilationDate = $meta.CompilationDate.ToLocalTime()
+        }
+    else
+        {$meta = Get-SrfData $srf -ErrorAction Ignore}
 
-    #"HasExited " + $process.HasExited
-    "GBS finished in " + $process.ExitTime + " with code " + $process.ExitCode
-    "------------------------------------------------------------------------------"
+    return $meta
 }
+
+
+
+Set-Variable LANG_LIST -Option Constant -Value @("HEB", "ENU") -Description "List of languages for compilation"
+
+#[int]$MAX_COMPILE_ATTEMPTS = 3
+Set-Variable MAX_COMPILE_ATTEMPTS -Option Constant -Value 3
+
+Set-Variable SBL_TOOLS_ROOT -Option Constant -Value "C:\Siebel\15.0.0.0.0"
+
+Set-Variable PATH_TO_LOCAL_SRF_FOLDER      -Option Constant -Value (($MyInvocation.MyCommand.Path | Split-Path -Parent) <#+ "\"#>) #This folder for compilation SRF_NAME_NEW
+Set-Variable PATH_TO_SERVER_SRF_FOLDER     -Option Constant -Value "\\siebelappdev02\d$\Siebel\15.0.0.0.0\ses\siebsrvr\OBJECTS" #In this folder present srf for each languege. SRF_NAME and SRF_NAME_LAST.
+Set-Variable PATH_TO_BROWSER_SCRIPT_FOLDER -Option Constant -Value "\\siebelappdev02\D$\Siebel\15.0.0.0.0\eappweb\PUBLIC"
+
+Set-Variable SRF_NAME      -Option Constant -Value "siebel_sia.srf"      -Description "File for siebel server executing"
+Set-Variable SRF_NAME_NEW  -Option Constant -Value "siebel_sia.srf.New"  -Description "Temporary file for compile"
+Set-Variable SRF_NAME_LAST -Option Constant -Value "siebel_sia.srf.LastFullCompile.srf" -Description "Back copy of SRF_NAME"
+
+Set-Variable GBS_CFG -Option Constant -Value (($MyInvocation.MyCommand.Path | Split-Path -Parent) + "\gbs.cfg")
+Set-Variable GBS_EXE -Option Constant -Value "C:\Siebel\15.0.0.0.0\Client\BIN\genbscript.exe"
+
+Set-Variable SBL_TOOLS_LOGIN    -Option Constant -Value "SADMIN"
+Set-Variable SBL_TOOLS_PASSWORD -Option Constant -Value "SADMIN"
+
+Set-Variable SIEBEL_WEB_SERVER -Option Constant -Value "siebelappdev02"
+Set-Variable SIEBEL_SERVICE    -Option Constant -Value "siebsrvr_enDEV_asDEV"
+
+Set-Variable COMPILE_DATA_INFO_STREAM  -Option Constant -Value "SMD" #srf meta data
+
+$recompilingList = @{}
+[bool]$isStopCompile = $false
+$srfMetaData
+
+while($isStopCompile -ne $true)
+{
+    foreach($lang in $LANG_LIST)
+    {
+   
+        
+        if (($recompilingList["$lang-IsCompiled"] -eq $true) -or ($recompilingList["$lang-Attempt"] -ge $MAX_COMPILE_ATTEMPTS)) 
+        {
+            $isStopCompile = $true
+            continue
+        }
+        $isStopCompile = $false
+        $recompilingList["$lang-Attempt"] = 1 + $recompilingList["$lang-Attempt"]
+        
+        if ($recompilingList["$lang-Attempt"] -le 1)
+            {"$([System.DateTime]::Now.ToString("dd.MM.yyyy HH:mm:ss")). Compiling language $lang"}
+        else
+            {"$([System.DateTime]::Now.ToString("dd.MM.yyyy HH:mm:ss")). Compiling language $lang. Attempt # $($recompilingList["$lang-Attempt"])"}
+        $newSRF = "$PATH_TO_LOCAL_SRF_FOLDER\$SRF_NAME_NEW.$lang"
+        "New SRF:$newSRF"
+        $process = Start-Process -FilePath $SBL_TOOLS_ROOT\Tools\bin\siebdev.exe -ArgumentList "/c", $SBL_TOOLS_ROOT\Tools\bin\enu\tools.cfg, "/d", "ServerDataSrc", "/u", $SBL_TOOLS_LOGIN, "/p", $SBL_TOOLS_PASSWORD, "/bc", '"Siebel Repository"', $newSRF, "/tl", $lang -PassThru <#-NoNewWindow#> -Wait 
+        "Compiling of $newSRF finished at $($process.ExitTime) with code $($process.ExitCode)"
+
+        if ($process.ExitCode -ne 0)
+        {
+            #$recompilingList[$lang + "_IsCompiled"] = $false
+            $recompilingList["$lang-IsCompiled"] = $false
+            continue
+        }
+        #$recompilingList[$lang + "_IsCompiled"] = $true
+        $recompilingList["$lang-IsCompiled"] = $true
+        ###
+        $srfMetaData = Get-srfdata $newSRF -ErrorAction Ignore
+        
+        Set-Content -Path $newSRF -Stream $COMPILE_DATA_INFO_STREAM -Value @"
+{
+"Hash"           : "$((Get-FileHash $newSRF).Hash)",
+"CompilationDate": "$($srfMetaData.CompilationDate.ToString("yyyy-MM-dd HH:mm:ss"))",
+"SrfCompileData" : $(ConvertTo-Json($srfMetaData))
+}
+"@
+
+
+
+        ###
+
+        
+        $serverFileName = "$PATH_TO_SERVER_SRF_FOLDER\$lang\$SRF_NAME_NEW"
+        Move-Item -Path $newSRF -Destination $serverFileName -Force #-WhatIf
+        $lastFileName = "$PATH_TO_SERVER_SRF_FOLDER\$lang\$SRF_NAME_LAST"
+        Remove-Item -Path $lastFileName  #-WhatIf
+        Copy-Item -Path $serverFileName -Destination $lastFileName #-WhatIf
+
+        "$([System.DateTime]::Now.ToString("dd.MM.yyyy HH:mm:ss")). GBS Started"
+        $process = Start-Process -Filepath $GBS_EXE -ArgumentList $GBS_CFG, $PATH_TO_BROWSER_SCRIPT_FOLDER\$lang, $lang -PassThru -NoNewWindow -Wait 
+        #Start-Process -Filepath C:\Siebel\15.0.0.0.0\Client\BIN\genbscript.exe -ArgumentList C:\Siebel\CompileAndDeployment\gbs.cfg, $\\siebelappdev02\D$\Siebel\15.0.0.0.0\eappweb\PUBLIC\ENU, "ENU" -PassThru -NoNewWindow -Wait 
+
+        "GBS finished in $($process.ExitTime) with code $($process.ExitCode)"
+        "--------------------------------------------------------------------------------------------"
+        #$recompilingList
+    }
+} #end while loop
+
 "Compiling finished"
+"============================================================================================"
 "Stop siebel service"
-"=============================================================================="
-#Stop siebel service
-$siebService = get-service -ComputerName $WEB_SERVER <#siebelappdev02#> -Name $siebelService
- Stop-Service -InputObject $siebService 
-## $siebService 
-foreach ($lang in $langList)
+$siebService = get-service -ComputerName $SIEBEL_WEB_SERVER -Name $SIEBEL_SERVICE
+Stop-Service -InputObject $siebService #-WhatIf 
+
+foreach ($lang in $LANG_LIST)
 {
-    "" + [System.DateTime]::Now.ToString("dd.MM.yyyy HH:mm:ss") + ". Replace srf " + $lang
-    #$NEW_SRF = (Get-PSDrive -name SblServerRoot).root + "\ses\siebsrvr\OBJECTS\" + $lang + "\siebel_sia.srf.new"
-    #Rename srfs
-    $fileName = "SblServerRoot:\ses\siebsrvr\OBJECTS\" + $lang + "\siebel_sia.srf"
-    $NEW_SRF = $fileName + ".new"
-    $arcFileName = $fileName  + "." + [System.DateTime]::Now.DayOfWeek
-    $fileNameToday = $fileName + ".Last"
+    "$([System.DateTime]::Now.ToString("dd.MM.yyyy HH:mm:ss")). Replace srf $lang"
+    $newFileName = "$PATH_TO_SERVER_SRF_FOLDER\$lang\$SRF_NAME_NEW"
+    $serverFileName = "$PATH_TO_SERVER_SRF_FOLDER\$lang\$SRF_NAME"
+
     
-    Move-Item -Path $fileName -Destination $arcFileName -Force
-    Move-Item -Path $NEW_SRF  -Destination $fileName 
-    Remove-Item -Path $fileNameToday 
-    Copy-Item -Path $fileName -Destination $fileNameToday 
+    #$compilationDate = (Get-SrfData $serverFileName).CompilationDate #11.07.21
+    $compilationDate = (GetMeta $serverFileName).CompilationDate
+    $arcFileName = $serverFileName  + "." + ($compilationDate.DayOfWeek) + ".SRF"  #11.07.21
+
+    if(Test-Path $arcFileName) 
+        #{$bsFolderToRemove = (Get-SrfData $arcFileName -ErrorAction Ignore).JsFolderName}
+        {$bsFolderToRemove = (GetMeta $arcFileName).JsFolderName}
+    else {$bsFolderToRemove = ""}
+        
+    #$bsFolderToRemove = (Get-Item -Path $PATH_TO_BROWSER_SCRIPT_FOLDER\$lang\$bsFolderToRemove -ErrorAction Ignore).FullName
+    Move-Item -Path $serverFileName -Destination $arcFileName -Force #-WhatIf
+    Move-Item -Path $newFileName -Destination $serverFileName #-WhatIf
+
     
-    
+    #"$([System.DateTime]::Now.ToString("dd.MM.yyyy HH:mm:ss")). Remove old BS folder - $bsFolderToRemove for $lang"
+    <#if ($bsFolderToRemove -eq $null -or $bsFolderToRemove -eq "" -or -not (Test-Path -Path $PATH_TO_BROWSER_SCRIPT_FOLDER\$lang\$bsFolderToRemove))
+    {
+        "Not found folder with BS for $arcFileName"
+        Remove-Item $PATH_TO_BROWSER_SCRIPT_FOLDER\$lang\$bsFolderToRemove -Recurse -WhatIf 
+    }
+    else
+    {
+        Remove-Item $PATH_TO_BROWSER_SCRIPT_FOLDER\$lang\$bsFolderToRemove -Recurse #-WhatIf 
+    }#>
+
+    if ($bsFolderToRemove -ne $null -and $bsFolderToRemove -ne "")
+    {
+        $bsFolderToRemove = $("$PATH_TO_BROWSER_SCRIPT_FOLDER\$lang\$bsFolderToRemove")
+        if (Test-Path -Path $bsFolderToRemove) 
+        {
+            "$([System.DateTime]::Now.ToString("dd.MM.yyyy HH:mm:ss")). Removing $bsFolderToRemove"
+            #Remove-Item $PATH_TO_BROWSER_SCRIPT_FOLDER\$lang\$bsFolderToRemove -Recurse
+            Remove-Item $bsFolderToRemove -Recurse
+        }
+        else {"Not found folder $bsFolderToRemove"}
+    }
+
 }
 
-"Start siebel service"
-"=============================================================================="
-#Start siebel service
-start-service -InputObject $siebService 
+#"Start siebel service"
+Start-Service -InputObject $siebService #-WhatIf
 $siebService 
 [System.Console]::WriteLine("Deployment finished.")
 #[System.Console]::ReadLine()
-<#
-\Client\BIN\genbscript.exe
-C:\Siebel\15.0.0.0.0\Client\BIN\genbscript.exe C:\finsGEN.cfg \\siebelappdev02\D$\Siebel\15.0.0.0.0\\eappweb\PUBLIC\heb heb
-
-Could not open repository file '
-\\siebelappdev02\D$\15.0.0.0.0\ses\siebsrvr\objects\enu\siebel_sia.srf'.
-\\siebelappdev02\D$\Siebel\15.0.0.0.0\ses\siebsrvr\OBJECTS\heb\siebel_sia.srf
-#>
